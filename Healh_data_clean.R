@@ -21,9 +21,12 @@ poids  <- read.csv("./Withings - Weight Julien.csv")
 Jawbone  <- read.csv("./Jawbone.csv")
 
 #Modification du fichier d'historique Jawbone
-JB  <- select(Jawbone, DATE, m_calories, m_steps, m_distance, weight)
-JB  <- mutate(JB, Date = as.Date(as.character(DATE),"%Y%m%d"), Cal_Burned = m_calories, Steps = m_steps, Distance = (m_distance)/1000, Weight = weight)
-JB  <- select(JB, Date, Cal_Burned, Steps, Distance, Weight)
+JB <- Jawbone  %>%
+  select(DATE, m_calories, m_steps, m_distance, weight) %>%
+  mutate(Date = as.Date(as.character(DATE),"%Y%m%d"), Cal_Burned = m_calories, Steps = m_steps, Distance = (m_distance)/1000, Weight = weight) %>%
+  select(Date, Cal_Burned, Steps, Distance, Weight) %>%
+  distinct(Date) %>%
+  filter(Date < "2014-12-11") %>%
 
 #Création d'une nouvelle table pour le poids, a cause du format de Date
 New_Table_Poids <- mutate(poids, Date = substr(Date,1,10), Weight = Weight..kg.)
@@ -39,8 +42,7 @@ Withing  <- mutate(Withing, Date = as.Date(Date))
 
 #Dédoublonnage des valeurs de poids
 Withing  <- distinct(Withing, Date)
-JB  <- distinct(JB, Date)
-JB  <- filter(JB, Date < "2014-12-11")
+
 
 #fusion des données de Jawbone et Withing
 Withing_JB  <- rbind(Withing,JB)
