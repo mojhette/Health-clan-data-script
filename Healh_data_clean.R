@@ -1,5 +1,6 @@
 #Library utilisée
 library(dplyr)
+library(tidyr)
 
 #Systeme de location pour le format des dates
 lct <- Sys.getlocale("LC_TIME"); Sys.setlocale("LC_TIME", "C")
@@ -23,26 +24,29 @@ Jawbone  <- read.csv("./Jawbone.csv")
 #Modification du fichier d'historique Jawbone
 JB <- Jawbone  %>%
   select(DATE, m_calories, m_steps, m_distance, weight) %>%
-  mutate(Date = as.Date(as.character(DATE),"%Y%m%d"), Cal_Burned = m_calories, Steps = m_steps, Distance = (m_distance)/1000, Weight = weight) %>%
+  mutate(Date = as.Date(as.character(DATE),"%Y%m%d"), 
+         Cal_Burned = m_calories, Steps = m_steps, 
+         Distance = (m_distance)/1000, Weight = weight) %>%
   select(Date, Cal_Burned, Steps, Distance, Weight) %>%
   distinct(Date) %>%
-  filter(Date < "2014-12-11") %>%
+  filter(Date < "2014-12-11") 
 
 #Création d'une nouvelle table pour le poids, a cause du format de Date
 New_Table_Poids <- mutate(poids, Date = substr(Date,1,10), Weight = Weight..kg.)
 Poids  <- select(New_Table_Poids, Date, Weight)
 
 #Renommage dans le fichier d'activité
-Activity  <- mutate(acti, Date, Steps, Cal_Burned = Calories, Distance = Distance..km.)
+Activity  <- mutate(acti, Date, Steps, Cal_Burned = Calories, 
+                    Distance = Distance..km.)
 
 #Jointure des fichiers poids et activités
 Final <- merge(Activity,Poids, all = TRUE, sort = TRUE)
-Withing  <- select(Final, Date, Steps, Distance, Cal_Burned, Weight)
-Withing  <- mutate(Withing, Date = as.Date(Date))
 
-#Dédoublonnage des valeurs de poids
-Withing  <- distinct(Withing, Date)
-
+# Finalisation des données Withings
+Withing  <- Final %>%
+  select(Date, Steps, Distance, Cal_Burned, Weight) %>%
+  mutate(Date = as.Date(Date)) %>%
+  distinct(Date) 
 
 #fusion des données de Jawbone et Withing
 Withing_JB  <- rbind(Withing,JB)
