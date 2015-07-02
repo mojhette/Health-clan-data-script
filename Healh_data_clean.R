@@ -4,6 +4,26 @@ library(tidyr)
 library(plyr)
 library(lubridate)
 
+#function for change NA Value by last observation 
+na.lomf  <- function(x) {
+  
+  na.lomf.0  <- function(x) {
+    non.na.idx  <- which(!is.na(x))
+    if (is.na(x[1L])) {
+      non.na.idx  <- c(1L, non.na.idx)
+    }
+    rep.int(x[non.na.idx], diff(c(non.na.idx, length(x) + 1L)))
+  }
+  
+  dim.len  <- length(dim(x))
+  
+  if (dim.len == 0L) {
+    na.lomf.0(x)
+  } else {
+    apply(x, dim.len, na.lomf.0)
+  }
+}
+
 #Systeme de location pour le format des dates
 lct <- Sys.getlocale("LC_TIME"); Sys.setlocale("LC_TIME", "C")
 
@@ -85,12 +105,18 @@ Withing_JB  <- distinct(Withing_JB, Date)
 # creation d'une variable pour voir la diff entre cal brulees, repos et conso
 Global  <-  merge(Withing_JB, MFP, all = TRUE, sort = TRUE)
 Global  <-  Global %>%
+#  mutate(Weight = ifelse(is.na(Weight),0,Weight)) %>%
+  mutate(Weight = na.lomf(Weight)) %>%  
   mutate(Diff_Weight = Weight - lag(Weight)) %>%
   mutate(age = year(Date) - year(bd) ) %>% 
   mutate(Cal_rest = (13.707 * Weight) + (492.3*1.74) - (6.673*age) + 77.607) %>%
   mutate(ratio_cal = Calories - (Cal_rest + Cal_Burned) ) %>%
+  mutate(Year_week = 
+           paste0(year(Date),'-', 
+           (ifelse(week(Date) < 10, paste0(0,week(Date)), week(Date))))) %>%
+#            (ifelse(week(Date) < 10, 1, 2)))) %>%
   select(Date, Weight, Diff_Weight, Calories, Steps, Sleep, Distance, 
-         Cal_Burned, deep, light, Cal_rest, ratio_cal) %>%
+         Cal_Burned, deep, light, Cal_rest, ratio_cal, Year_week) %>%
   arrange(desc(Date))
 
 # Affichage du resultat final dans R
@@ -99,3 +125,9 @@ View(Global)
 #Export au format CSV et visualisation des résultats
 
 write.table(Global, "data_health.csv", row.names=FALSE, sep=",",dec=".", na=" ")
+
+#Visualitsation hebdomadaire des résultats
+Hebdo  <- Global %>%
+  ddply(.(Year_week), summarize, sum_cal=sum(Calories), sum_step=sum(Steps, na.rm = TRUE)) %>%
+  arrange(desc(Year_week)) %>%
+  View
